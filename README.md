@@ -63,6 +63,8 @@ npm run build
 
 The frontend API base URL is controlled by `VITE_API_URL`.
 
+For a frontend-only portfolio demo on Vercel, set `VITE_DEMO_MODE=true` to load an interactive seeded board without requiring the Spring Boot API. Full local/production collaboration still uses the backend, MySQL, JWT, and STOMP WebSockets.
+
 ## Deployment
 
 Docker assets are included for the backend, frontend, and local MySQL deployment:

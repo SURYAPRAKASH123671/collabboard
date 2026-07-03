@@ -21,6 +21,89 @@ import SockJS from 'sockjs-client';
 import './styles.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8081';
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
+
+const createDemoBoard = () => ({
+  id: 'demo-board',
+  name: 'Product Launch Board',
+  viewers: ['Surya', 'Ravi'],
+  lists: [
+    {
+      id: 'todo',
+      title: 'Todo',
+      position: 0,
+      cards: [
+        {
+          id: 'card-auth',
+          title: 'JWT auth flow',
+          description: 'Protect REST APIs and WebSocket handshakes with authenticated user context.',
+          assignee: 'Surya',
+          position: 0,
+          comments: [
+            {
+              id: 'comment-auth',
+              author: 'Ravi',
+              body: 'Handshake validation is ready for demo.',
+              createdAt: new Date().toISOString()
+            }
+          ]
+        },
+        {
+          id: 'card-deploy',
+          title: 'Deployment polish',
+          description: 'Verify production build, environment variables, and README instructions.',
+          assignee: 'Priya',
+          position: 1,
+          comments: []
+        }
+      ]
+    },
+    {
+      id: 'doing',
+      title: 'Doing',
+      position: 1,
+      cards: [
+        {
+          id: 'card-realtime',
+          title: 'Real-time board sync',
+          description: 'Broadcast card movement, edits, comments, and activity updates through STOMP.',
+          assignee: 'Surya',
+          position: 0,
+          comments: []
+        }
+      ]
+    },
+    {
+      id: 'done',
+      title: 'Done',
+      position: 2,
+      cards: [
+        {
+          id: 'card-mysql',
+          title: 'MySQL persistence',
+          description: 'Persist users, boards, members, lists, cards, comments, and activity events.',
+          assignee: 'Surya',
+          position: 0,
+          comments: []
+        }
+      ]
+    }
+  ],
+  activity: [
+    {
+      id: 'activity-1',
+      actor: 'Surya',
+      message: 'moved Real-time board sync to Doing',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'activity-2',
+      actor: 'Priya',
+      message: 'commented on JWT auth flow',
+      createdAt: new Date().toISOString()
+    }
+  ]
+});
 
 function SortableCard({ card, list, lists, onOpenCard, onMoveCard, onDeleteCard }) {
   const {
@@ -208,7 +291,7 @@ function DroppableList({ list, listIndex, lists, children, onCreateCard, onRenam
 }
 
 function App() {
-  const [token, setToken] = useState(localStorage.getItem('collabboard.token') || '');
+  const [token, setToken] = useState(DEMO_MODE ? 'demo-token' : localStorage.getItem('collabboard.token') || '');
   const [authMode, setAuthMode] = useState('login');
   const [authForm, setAuthForm] = useState({
     name: 'Surya',
@@ -217,14 +300,18 @@ function App() {
   });
   const [authError, setAuthError] = useState('');
   const [actor, setActor] = useState(localStorage.getItem('collabboard.actor') || 'Surya');
-  const [boards, setBoards] = useState([]);
-  const [selectedBoardId, setSelectedBoardId] = useState(localStorage.getItem('collabboard.boardId') || '');
-  const [board, setBoard] = useState(null);
-  const [members, setMembers] = useState([]);
+  const [boards, setBoards] = useState(DEMO_MODE ? [{ id: 'demo-board', name: 'Product Launch Board' }] : []);
+  const [selectedBoardId, setSelectedBoardId] = useState(DEMO_MODE ? 'demo-board' : localStorage.getItem('collabboard.boardId') || '');
+  const [board, setBoard] = useState(DEMO_MODE ? createDemoBoard() : null);
+  const [members, setMembers] = useState(DEMO_MODE ? [
+    { name: 'Surya', email: 'surya@example.com', role: 'OWNER' },
+    { name: 'Ravi', email: 'ravi@example.com', role: 'MEMBER' },
+    { name: 'Priya', email: 'priya@example.com', role: 'MEMBER' }
+  ] : []);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteError, setInviteError] = useState('');
   const [query, setQuery] = useState('');
-  const [connected, setConnected] = useState(false);
+  const [connected, setConnected] = useState(DEMO_MODE);
   const [selectedCardId, setSelectedCardId] = useState('');
   const stompRef = useRef(null);
   const sensors = useSensors(
@@ -237,6 +324,7 @@ function App() {
   }, [actor]);
 
   useEffect(() => {
+    if (DEMO_MODE) return;
     if (!token) return;
 
     fetch(`${API_URL}/api/boards`, {
@@ -260,6 +348,7 @@ function App() {
   }, [selectedBoardId, token]);
 
   useEffect(() => {
+    if (DEMO_MODE) return;
     if (!token || !selectedBoardId) return;
 
     localStorage.setItem('collabboard.boardId', selectedBoardId);
@@ -289,6 +378,7 @@ function App() {
   }, [selectedBoardId, token]);
 
   useEffect(() => {
+    if (DEMO_MODE) return undefined;
     if (!token || !selectedBoardId) return undefined;
 
     const client = new Client({
@@ -350,6 +440,7 @@ function App() {
   async function submitAuth(event) {
     event.preventDefault();
     setAuthError('');
+    if (DEMO_MODE) return;
     const path = authMode === 'signup' ? 'signup' : 'login';
     const body = authMode === 'signup' ? authForm : { email: authForm.email, password: authForm.password };
 
@@ -371,6 +462,7 @@ function App() {
   }
 
   function logout() {
+    if (DEMO_MODE) return;
     localStorage.removeItem('collabboard.token');
     localStorage.removeItem('collabboard.boardId');
     setToken('');
@@ -385,6 +477,20 @@ function App() {
   async function createBoard() {
     const name = window.prompt('Board name');
     if (!name?.trim()) return;
+
+    if (DEMO_MODE) {
+      const createdBoard = {
+        id: `board-${Date.now()}`,
+        name: name.trim(),
+        viewers: [actor],
+        lists: [],
+        activity: []
+      };
+      setBoards((currentBoards) => [...currentBoards, { id: createdBoard.id, name: createdBoard.name }]);
+      setSelectedBoardId(createdBoard.id);
+      setBoard(createdBoard);
+      return;
+    }
 
     const response = await fetch(`${API_URL}/api/boards`, {
       method: 'POST',
@@ -407,6 +513,13 @@ function App() {
     const email = inviteEmail.trim();
     if (!email || !selectedBoardId) return;
 
+    if (DEMO_MODE) {
+      const member = { name: email.split('@')[0], email, role: 'MEMBER' };
+      setMembers((currentMembers) => [...currentMembers, member]);
+      setInviteEmail('');
+      return;
+    }
+
     const response = await fetch(`${API_URL}/api/boards/${selectedBoardId}/members`, {
       method: 'POST',
       headers: {
@@ -428,6 +541,10 @@ function App() {
   }
 
   function publish(command) {
+    if (DEMO_MODE) {
+      applyDemoCommand(command);
+      return;
+    }
     const client = stompRef.current;
     if (!client?.connected || !selectedBoardId) return;
     client.publish({
@@ -489,6 +606,146 @@ function App() {
 
   function deleteCard(listId, cardId) {
     publish({ type: 'DELETE_CARD', listId, cardId });
+  }
+
+  function appendDemoActivity(sourceBoard, message) {
+    return {
+      ...sourceBoard,
+      activity: [
+        {
+          id: `activity-${Date.now()}`,
+          actor,
+          message,
+          createdAt: new Date().toISOString()
+        },
+        ...sourceBoard.activity
+      ].slice(0, 20)
+    };
+  }
+
+  function applyDemoCommand(command) {
+    if (command.type === 'MOVE_CARD') return;
+
+    setBoard((currentBoard) => {
+      if (!currentBoard) return currentBoard;
+
+      if (command.type === 'CREATE_LIST') {
+        const nextBoard = {
+          ...currentBoard,
+          lists: [
+            ...currentBoard.lists,
+            {
+              id: `list-${Date.now()}`,
+              title: command.title,
+              position: currentBoard.lists.length,
+              cards: []
+            }
+          ]
+        };
+        return appendDemoActivity(nextBoard, `created list ${command.title}`);
+      }
+
+      if (command.type === 'UPDATE_LIST') {
+        const nextBoard = {
+          ...currentBoard,
+          lists: currentBoard.lists.map((list) =>
+            list.id === command.listId ? { ...list, title: command.title } : list
+          )
+        };
+        return appendDemoActivity(nextBoard, `renamed a list to ${command.title}`);
+      }
+
+      if (command.type === 'DELETE_LIST') {
+        const list = currentBoard.lists.find((candidate) => candidate.id === command.listId);
+        const nextBoard = {
+          ...currentBoard,
+          lists: currentBoard.lists.filter((candidate) => candidate.id !== command.listId)
+        };
+        return appendDemoActivity(nextBoard, `deleted list ${list?.title || 'Untitled'}`);
+      }
+
+      if (command.type === 'MOVE_LIST') {
+        const lists = [...currentBoard.lists];
+        const currentIndex = lists.findIndex((list) => list.id === command.listId);
+        if (currentIndex < 0) return currentBoard;
+        const targetIndex = Math.max(0, Math.min(command.targetPosition, lists.length - 1));
+        const [movingList] = lists.splice(currentIndex, 1);
+        lists.splice(targetIndex, 0, movingList);
+        return appendDemoActivity({ ...currentBoard, lists }, `moved list ${movingList.title}`);
+      }
+
+      if (command.type === 'CREATE_CARD') {
+        const nextCard = {
+          id: `card-${Date.now()}`,
+          title: command.title,
+          description: command.description,
+          assignee: command.assignee,
+          position: 0,
+          comments: []
+        };
+        const nextBoard = {
+          ...currentBoard,
+          lists: currentBoard.lists.map((list) =>
+            list.id === command.listId ? { ...list, cards: [...list.cards, nextCard] } : list
+          )
+        };
+        return appendDemoActivity(nextBoard, `created card ${command.title}`);
+      }
+
+      if (command.type === 'UPDATE_CARD') {
+        const nextBoard = {
+          ...currentBoard,
+          lists: currentBoard.lists.map((list) => ({
+            ...list,
+            cards: list.cards.map((card) =>
+              card.id === command.cardId
+                ? { ...card, title: command.title, description: command.description, assignee: command.assignee }
+                : card
+            )
+          }))
+        };
+        return appendDemoActivity(nextBoard, `updated card ${command.title}`);
+      }
+
+      if (command.type === 'ADD_COMMENT') {
+        const nextBoard = {
+          ...currentBoard,
+          lists: currentBoard.lists.map((list) => ({
+            ...list,
+            cards: list.cards.map((card) =>
+              card.id === command.cardId
+                ? {
+                    ...card,
+                    comments: [
+                      ...(card.comments || []),
+                      {
+                        id: `comment-${Date.now()}`,
+                        author: actor,
+                        body: command.commentBody,
+                        createdAt: new Date().toISOString()
+                      }
+                    ]
+                  }
+                : card
+            )
+          }))
+        };
+        return appendDemoActivity(nextBoard, 'added a card comment');
+      }
+
+      if (command.type === 'DELETE_CARD') {
+        const nextBoard = {
+          ...currentBoard,
+          lists: currentBoard.lists.map((list) => ({
+            ...list,
+            cards: list.cards.filter((card) => card.id !== command.cardId)
+          }))
+        };
+        return appendDemoActivity(nextBoard, 'deleted a card');
+      }
+
+      return currentBoard;
+    });
   }
 
   function findCardLocation(cardId, sourceBoard = board) {
