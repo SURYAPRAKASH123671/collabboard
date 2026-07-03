@@ -1,0 +1,45 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: collabboard
+      MYSQL_ROOT_PASSWORD: collabboard
+    ports:
+      - "3307:3306"
+    volumes:
+      - collabboard_mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-pcollabboard"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      COLLABBOARD_DB_URL: jdbc:mysql://mysql:3306/collabboard?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      COLLABBOARD_DB_USERNAME: root
+      COLLABBOARD_DB_PASSWORD: collabboard
+      COLLABBOARD_JWT_SECRET: change-this-production-secret-at-least-32-characters
+      COLLABBOARD_DDL_AUTO: update
+      COLLABBOARD_ALLOWED_ORIGINS: http://localhost:5173
+      PORT: 8081
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8081
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  collabboard_mysql:
