@@ -1,39 +1,71 @@
 # CollabBoard
 
-A real-time Trello-style collaboration board built with React and Spring Boot WebSockets.
+Real-time Trello-style collaboration board built with React, Spring Boot, JWT authentication, MySQL, and STOMP WebSockets.
 
-## Blueprint
+[Live Demo](https://collabboard-silk.vercel.app) | [GitHub](https://github.com/SURYAPRAKASH123671/collabboard)
 
-CollabBoard follows the recommended middle-ground blueprint:
+> The public Vercel deployment runs in frontend demo mode so visitors can open the board instantly. The full backend stack is included in this repository and runs locally with Spring Boot, MySQL, JWT, and authenticated WebSockets.
 
-- Multiple Kanban boards with lists and cards
-- List create, rename, delete-empty, and reorder controls
-- Live updates over STOMP WebSockets
-- Presence indicators for users viewing a board
-- Activity feed for card/list events
-- Card detail modal with editable fields
-- Persisted card comments broadcast live to board viewers
-- Board membership with owner/member roles and invite-by-email access control
-- Optimistic React UI with server reconciliation
+## Highlights
 
-## Project Layout
+- Multi-board Kanban workspace with lists, cards, drag-and-drop ordering, and board switching.
+- JWT-secured REST APIs for signup, login, board access, and membership workflows.
+- Authenticated STOMP WebSocket handshake for live board commands and presence events.
+- Real-time card/list updates, comments, activity feed entries, and viewer presence indicators.
+- MySQL persistence for users, boards, members, lists, cards, comments, and activity events.
+- Optimistic React UI with server reconciliation for smoother collaboration behavior.
+- Docker and Docker Compose setup for local full-stack execution.
+- Backend test coverage plus frontend production build verification.
+
+## Tech Stack
+
+| Layer | Tools |
+| --- | --- |
+| Frontend | React, Vite, JavaScript, CSS |
+| Backend | Java, Spring Boot, Spring Security, Spring Data JPA |
+| Realtime | STOMP over WebSocket |
+| Auth | JWT, BCrypt |
+| Database | MySQL |
+| DevOps | Docker, Docker Compose, Vercel, Railway-ready backend config |
+| Testing | JUnit, Spring Boot Test, Maven, Vite build |
+
+## Architecture
+
+```text
+React Client
+  |-- REST: auth, boards, members
+  |-- STOMP WebSocket: board commands, presence
+        |
+Spring Boot API
+  |-- AuthController
+  |-- BoardRestController
+  |-- BoardWebSocketController
+  |-- Service layer
+  |-- JPA repositories
+        |
+MySQL
+```
+
+## Project Structure
 
 ```text
 collabboard/
-  backend/   Spring Boot REST + STOMP WebSocket API
-  frontend/  React + Vite client
+  backend/          Spring Boot REST + STOMP WebSocket API
+  frontend/         React + Vite client
+  docker-compose.yml
+  .env.example
 ```
 
 ## Run Locally
 
-Backend:
+Start the backend:
 
 ```bash
 cd backend
 mvn spring-boot:run
 ```
 
-Frontend:
+Start the frontend:
 
 ```bash
 cd frontend
@@ -41,7 +73,27 @@ npm install
 npm run dev
 ```
 
-The frontend expects the backend at `http://localhost:8081`.
+The frontend expects the backend at:
+
+```text
+http://localhost:8081
+```
+
+## Run With Docker
+
+```bash
+docker compose up --build
+```
+
+Local services:
+
+```text
+Frontend: http://localhost:5173
+Backend:  http://localhost:8081
+MySQL:    localhost:3307
+```
+
+Use `.env.example` as the environment checklist for database credentials, JWT secret, CORS origins, and ports.
 
 ## Verification
 
@@ -61,79 +113,7 @@ npm audit
 npm run build
 ```
 
-The frontend API base URL is controlled by `VITE_API_URL`.
-
-For a frontend-only portfolio demo on Vercel, set `VITE_DEMO_MODE=true` to load an interactive seeded board without requiring the Spring Boot API. Full local/production collaboration still uses the backend, MySQL, JWT, and STOMP WebSockets.
-
-## Deployment
-
-Docker assets are included for the backend, frontend, and local MySQL deployment:
-
-```bash
-docker compose up --build
-```
-
-Compose exposes:
-
-```text
-Frontend: http://localhost:5173
-Backend:  http://localhost:8081
-MySQL:    localhost:3307
-```
-
-Use `.env.example` as the deployment checklist for database, JWT, CORS, and port settings. In production, replace `COLLABBOARD_JWT_SECRET`, set `COLLABBOARD_ALLOWED_ORIGINS` to the real frontend URL, and prefer managed MySQL plus migration tooling before public release.
-
-## Production Demo Deployment
-
-The public Vercel demo can run in frontend-only demo mode with `VITE_DEMO_MODE=true`. For a fully live real-time demo, deploy the Spring Boot backend and MySQL separately, then point Vercel at the hosted API.
-
-Recommended Railway backend setup:
-
-1. Create a Railway project from this GitHub repository.
-2. Add a MySQL service to the same Railway project.
-3. Deploy the backend service with root directory `/backend`.
-4. Set Railway config file path to `/backend/railway.toml`.
-5. Set backend environment variables:
-
-```text
-COLLABBOARD_DB_URL=jdbc:mysql://${{MySQL.MYSQLHOST}}:${{MySQL.MYSQLPORT}}/${{MySQL.MYSQLDATABASE}}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-COLLABBOARD_DB_USERNAME=${{MySQL.MYSQLUSER}}
-COLLABBOARD_DB_PASSWORD=${{MySQL.MYSQLPASSWORD}}
-COLLABBOARD_JWT_SECRET=<64+ character random secret>
-COLLABBOARD_DDL_AUTO=update
-COLLABBOARD_ALLOWED_ORIGINS=https://collabboard-silk.vercel.app
-```
-
-After Railway gives the backend a public domain, verify:
-
-```text
-https://<railway-backend-domain>/actuator/health
-```
-
-Then update Vercel frontend variables:
-
-```text
-VITE_DEMO_MODE=false
-VITE_API_URL=https://<railway-backend-domain>
-```
-
-## MySQL Persistence
-
-The backend now persists boards, lists, cards, and activity events with Spring Data JPA. Presence stays in memory because it represents active viewers, not long-term project data.
-
-Default local connection:
-
-```properties
-COLLABBOARD_DB_URL=jdbc:mysql://localhost:3306/collabboard?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-COLLABBOARD_DB_USERNAME=root
-COLLABBOARD_DB_PASSWORD=
-```
-
-The demo board is seeded automatically only when the `demo-board` record does not exist.
-
-## JWT Auth
-
-REST board APIs are protected with stateless JWT authentication.
+## API Overview
 
 Auth endpoints:
 
@@ -143,20 +123,7 @@ POST /api/auth/login
 GET  /api/auth/me
 ```
 
-Send the token on protected REST calls:
-
-```http
-Authorization: Bearer <token>
-```
-
-Local token config:
-
-```properties
-COLLABBOARD_JWT_SECRET=collabboard-local-dev-secret-change-me-please-32chars
-COLLABBOARD_JWT_ACCESS_TOKEN_SECONDS=3600
-```
-
-## Boards API
+Board endpoints:
 
 ```text
 GET  /api/boards
@@ -166,7 +133,7 @@ GET  /api/boards/{boardId}/members
 POST /api/boards/{boardId}/members
 ```
 
-WebSocket clients subscribe and publish per board:
+WebSocket destinations:
 
 ```text
 /topic/boards/{boardId}
@@ -175,7 +142,7 @@ WebSocket clients subscribe and publish per board:
 /app/boards/{boardId}/presence/leave
 ```
 
-Supported board command types include:
+Supported board command types:
 
 ```text
 CREATE_LIST, UPDATE_LIST, DELETE_LIST, MOVE_LIST
@@ -183,27 +150,48 @@ CREATE_CARD, UPDATE_CARD, MOVE_CARD, DELETE_CARD
 ADD_COMMENT
 ```
 
-STOMP clients must send the JWT during `CONNECT`:
+REST and WebSocket clients must send:
 
-```text
+```http
 Authorization: Bearer <token>
 ```
 
-The backend derives the activity/presence actor from the authenticated WebSocket principal instead of trusting a client-sent name.
+## Production Notes
 
-Board data is member-scoped. Users only see boards they own or have been invited to, and WebSocket joins/commands validate membership before returning or mutating board state.
+The public Vercel link is configured with:
 
-## Week-by-week Build Plan
+```text
+VITE_DEMO_MODE=true
+```
 
-1. Week 1: Scaffold backend/frontend, model boards/lists/cards, create the first live board screen.
-2. Week 2: Add REST CRUD and STOMP broadcasts for card create/update/move/delete.
-3. Week 3: Add drag-and-drop ordering and optimistic UI reconciliation.
-4. Week 4: Add presence tracking per board and a real-time activity feed.
-5. Week 5: Add JWT auth, user-owned boards, and invite-ready board membership.
-6. Week 6: Persist boards/lists/cards/users in MySQL with migrations.
-7. Week 7: Add comments, card details, validation, and useful error states.
-8. Week 8: Add concurrency polish: idempotent commands, versions, and stale update handling.
-9. Week 9: Add tests for services, WebSocket flows, and critical React interactions.
-10. Week 10: Improve UI, responsive behavior, and demo seed data.
-11. Week 11: Add observability-friendly activity history and deployment config.
-12. Week 12: Final demo script, README screenshots, architecture diagram, and interview talking points.
+That mode loads a seeded interactive board without requiring a hosted backend. To connect the public frontend to the real backend, deploy the Spring Boot API and MySQL, then set:
+
+```text
+VITE_DEMO_MODE=false
+VITE_API_URL=https://<hosted-backend-domain>
+```
+
+Railway backend configuration is included in `backend/railway.toml`, including an actuator health check at:
+
+```text
+/actuator/health
+```
+
+Required backend environment variables:
+
+```text
+COLLABBOARD_DB_URL=jdbc:mysql://<host>:<port>/<database>?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+COLLABBOARD_DB_USERNAME=<username>
+COLLABBOARD_DB_PASSWORD=<password>
+COLLABBOARD_JWT_SECRET=<64+ character random secret>
+COLLABBOARD_DDL_AUTO=update
+COLLABBOARD_ALLOWED_ORIGINS=https://collabboard-silk.vercel.app
+```
+
+## Interview Talking Points
+
+- Authenticated WebSocket handshake instead of trusting client-sent user names.
+- Board-level authorization for REST and WebSocket actions.
+- Optimistic UI updates reconciled with server broadcasts.
+- Real-time activity feed as an event-history style collaboration trail.
+- Separate frontend demo mode for portfolio access while preserving a complete backend implementation.
