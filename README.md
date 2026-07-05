@@ -83,6 +83,40 @@ MySQL:    localhost:3307
 
 Use `.env.example` as the deployment checklist for database, JWT, CORS, and port settings. In production, replace `COLLABBOARD_JWT_SECRET`, set `COLLABBOARD_ALLOWED_ORIGINS` to the real frontend URL, and prefer managed MySQL plus migration tooling before public release.
 
+## Production Demo Deployment
+
+The public Vercel demo can run in frontend-only demo mode with `VITE_DEMO_MODE=true`. For a fully live real-time demo, deploy the Spring Boot backend and MySQL separately, then point Vercel at the hosted API.
+
+Recommended Railway backend setup:
+
+1. Create a Railway project from this GitHub repository.
+2. Add a MySQL service to the same Railway project.
+3. Deploy the backend service with root directory `/backend`.
+4. Set Railway config file path to `/backend/railway.toml`.
+5. Set backend environment variables:
+
+```text
+COLLABBOARD_DB_URL=jdbc:mysql://${{MySQL.MYSQLHOST}}:${{MySQL.MYSQLPORT}}/${{MySQL.MYSQLDATABASE}}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+COLLABBOARD_DB_USERNAME=${{MySQL.MYSQLUSER}}
+COLLABBOARD_DB_PASSWORD=${{MySQL.MYSQLPASSWORD}}
+COLLABBOARD_JWT_SECRET=<64+ character random secret>
+COLLABBOARD_DDL_AUTO=update
+COLLABBOARD_ALLOWED_ORIGINS=https://collabboard-silk.vercel.app
+```
+
+After Railway gives the backend a public domain, verify:
+
+```text
+https://<railway-backend-domain>/actuator/health
+```
+
+Then update Vercel frontend variables:
+
+```text
+VITE_DEMO_MODE=false
+VITE_API_URL=https://<railway-backend-domain>
+```
+
 ## MySQL Persistence
 
 The backend now persists boards, lists, cards, and activity events with Spring Data JPA. Presence stays in memory because it represents active viewers, not long-term project data.
