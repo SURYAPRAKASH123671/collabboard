@@ -1,5 +1,7 @@
 # CollabBoard
 
+[![CI](https://github.com/SURYAPRAKASH123671/collabboard/actions/workflows/ci.yml/badge.svg)](https://github.com/SURYAPRAKASH123671/collabboard/actions/workflows/ci.yml)
+
 ![CollabBoard project cover](docs/assets/collabboard-cover.png)
 
 **CollabBoard** is a real-time Trello-style collaboration board built with **React**, **Spring Boot**, **MySQL**, **JWT authentication**, and **STOMP WebSockets**.
@@ -244,4 +246,3 @@ COLLABBOARD_ALLOWED_ORIGINS=https://collabboard-silk.vercel.app
 | MySQL persistence | Implemented |
 | WebSocket auth | Implemented |
 | Production backend hosting | Deployment-ready, pending hosted backend |
-
