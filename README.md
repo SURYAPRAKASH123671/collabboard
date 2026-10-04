@@ -121,7 +121,10 @@ VITE_API_URL=http://localhost:8081
 
 ## Run With Docker
 
+Copy the local example file, change the sample values, and start the stack:
+
 ```bash
+cp .env.example .env
 docker compose up --build
 ```
 
@@ -196,15 +199,15 @@ REST and WebSocket clients must send:
 Authorization: Bearer <token>
 ```
 
-## Production Notes
+## Deployment Boundary
 
-The public demo currently uses:
+The public demo currently uses frontend demo mode:
 
 ```text
 VITE_DEMO_MODE=true
 ```
 
-This keeps the portfolio demo available without requiring a hosted backend. For a full production real-time deployment, host the Spring Boot API and MySQL, then set:
+This keeps the frontend preview available without a hosted backend. The complete API and database run locally; no public production backend is claimed. To connect a separately hosted API, set:
 
 ```text
 VITE_DEMO_MODE=false
@@ -245,4 +248,12 @@ COLLABBOARD_ALLOWED_ORIGINS=https://collabboard-silk.vercel.app
 | Backend implementation | Complete and tested locally |
 | MySQL persistence | Implemented |
 | WebSocket auth | Implemented |
-| Production backend hosting | Deployment-ready, pending hosted backend |
+| Public backend hosting | Not currently deployed |
+
+## Troubleshooting
+
+- If Docker reports missing Compose variables, copy `.env.example` to `.env` and set local-only values.
+- If the frontend cannot reach the API, confirm the backend is listening on port `8081` and that the configured origin is allowed by CORS.
+- If MySQL does not become healthy, inspect the MySQL container logs and confirm the local database password in `.env`.
+- A `401` response usually means the request is missing a valid bearer token; a `403` means the authenticated user lacks board membership or the required role.
+- The hosted frontend demo uses demo mode and does not test the remote Spring Boot or WebSocket backend.

@@ -64,6 +64,11 @@ jobs:
   docker-compose:
     name: Docker Compose config
     runs-on: ubuntu-latest
+    env:
+      COLLABBOARD_DB_USERNAME: collabboard_ci
+      COLLABBOARD_DB_PASSWORD: ci-only-database-password
+      COLLABBOARD_JWT_SECRET: ci-only-signing-key-with-more-than-32-characters
+      COLLABBOARD_ALLOWED_ORIGINS: http://localhost:5173
 
     steps:
       - name: Checkout repository
